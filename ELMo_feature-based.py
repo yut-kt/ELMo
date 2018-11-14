@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from argparse import ArgumentParser
 import os
 import MeCab
 import tensorflow as tf
@@ -11,8 +12,9 @@ def main():
     tags, sentences = get_tuple_tags_sentences()
     sentences = get_word_strList(sentences)
     features = None
+    max_size = len(tags)
     with tf.Session() as sess:
-        for sliced_tags, sliced_sentences, in zip(slice_list(tags, 100), slice_list(sentences, 100)):
+        for index, sliced_sentences in enumerate(slice_list(sentences, args.num_split_elementss)):
             sess.run(tf.global_variables_initializer())
             sess.run(tf.tables_initializer())
             embeddings = elmo(sliced_sentences, signature='default', as_dict=True)['elmo']
@@ -20,7 +22,13 @@ def main():
                 features = sess.run(embeddings).sum(axis=1)
             else:
                 features = np.r_[features, sess.run(embeddings).sum(axis=1)]
-    np.savez(f'./data/feature.npz', elmo=features, labels=tags)
+
+            size = index * args.num_split_elements
+            if size > max_size:
+                size = max_size
+            print(size, '/', max_size, flush=True)
+
+    np.savez(f'{args.output_name}.npz', elmo=features, labels=tags)
 
 
 def get_tuple_tags_sentences():
@@ -29,7 +37,7 @@ def get_tuple_tags_sentences():
     :return: タグ配列と文配列のタプル
     """
     tags, sentences = [], []
-    with open(train_file) as fp:
+    with open(args.input_file) as fp:
         for line in fp:
             tag, _, sentence = line.strip().split(maxsplit=2)
             tags.append(tag)
@@ -65,10 +73,16 @@ def slice_list(l, n):
 
 
 if __name__ == '__main__':
-    train_file = './data/train.list'
+    parser = ArgumentParser(description='ELMo Feature Based')
+    parser.add_argument('-i', '--input_file', help='入力ファイルパス', required=True)
+    parser.add_argument('-o', '--output_name', help='出力ファイル名', required=True)
+    parser.add_argument('-c', '--cache_dir', help='ELMoのダウンロードパス', default='.module_cache')
+    parser.add_argument('-n', '--num_split_elements', help='ELMo1回にかける数', type=int, default=100)
+    args = parser.parse_args()
+
     mecab = MeCab.Tagger()
 
-    os.environ['TFHUB_CACHE_DIR'] = './.module_cache'
+    os.environ['TFHUB_CACHE_DIR'] = args.cache_dir
     elmo = hub.Module("https://tfhub.dev/google/elmo/2", trainable=True)
 
     main()
