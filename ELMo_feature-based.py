@@ -14,7 +14,7 @@ def main():
     features = None
     max_size = len(tags)
     with tf.Session() as sess:
-        for index, sliced_sentences in enumerate(slice_list(sentences, args.num_split_elementss)):
+        for index, sliced_sentences in enumerate(slice_list(sentences, args.num_split_elements)):
             sess.run(tf.global_variables_initializer())
             sess.run(tf.tables_initializer())
             embeddings = elmo(sliced_sentences, signature='default', as_dict=True)['elmo']
