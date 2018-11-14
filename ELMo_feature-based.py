@@ -19,11 +19,11 @@ def main():
             sess.run(tf.tables_initializer())
             embeddings = elmo(sliced_sentences, signature='default', as_dict=True)['elmo']
             if features is None:
-                features = sess.run(embeddings).sum(axis=1)
+                features = sess.run(embeddings)
             else:
-                features = np.r_[features, sess.run(embeddings).sum(axis=1)]
+                features = np.r_[features, sess.run(embeddings)]
 
-            size = index * args.num_split_elements
+            size = (index + 1) * args.num_split_elements
             if size > max_size:
                 size = max_size
             print(size, '/', max_size, flush=True)
